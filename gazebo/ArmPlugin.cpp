@@ -106,7 +106,7 @@ ArmPlugin::ArmPlugin() : ModelPlugin(), cameraNode(new gazebo::transport::Node()
 	inputRawWidth    = 0;
 	inputRawHeight   = 0;
 	actionJointDelta = 0.15f;
-	actionVelDelta   = 0.1f;
+	actionVelDelta   = 0.05f;
 	maxEpisodeLength = 100;
 	episodeFrames    = 0;
 
@@ -333,7 +333,7 @@ bool ArmPlugin::updateAgent()
 	/ TODO - Increase or decrease the joint velocity based on whether the action is even or odd
 	/
 	*/
-	float velocity = (action/2)?(-actionVelDelta):(actionVelDelta); // TODO - Set joint velocity based on whether action is even or odd.
+	float velocity = (action/2!=0)?(-actionVelDelta):(actionVelDelta); // TODO - Set joint velocity based on whether action is even or odd.
 
 	if( velocity < VELOCITY_MIN )
 		velocity = VELOCITY_MIN;
