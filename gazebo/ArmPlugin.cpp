@@ -17,8 +17,8 @@
 
 // Turn on velocity based control
 #define VELOCITY_CONTROL true
-#define VELOCITY_MIN -0.2f
-#define VELOCITY_MAX  0.2f
+#define VELOCITY_MIN -0.1f
+#define VELOCITY_MAX  0.1f
 
 #define NUM_ACTIONS 6
 
@@ -30,29 +30,29 @@
 #define GAMMA 0.9f
 #define EPS_START 0.9f
 #define EPS_END 0.05f
-#define EPS_DECAY 100
+#define EPS_DECAY 300
 
 /*
 / TODO - Tune the following hyperparameters
 /
 */
 
-#define INPUT_WIDTH   512
-#define INPUT_HEIGHT  512
+#define INPUT_WIDTH   128
+#define INPUT_HEIGHT  128
 #define OPTIMIZER "RMSprop"
-#define LEARNING_RATE 0.02f
+#define LEARNING_RATE 0.2f
 #define REPLAY_MEMORY 10000
-#define BATCH_SIZE 8
+#define BATCH_SIZE 16
 #define USE_LSTM true
-#define LSTM_SIZE 256
+#define LSTM_SIZE 160
 
 /*
 / TODO - Define Reward Parameters
 /
 */
 
-#define REWARD_WIN  1.0f
-#define REWARD_LOSS -1.0f
+#define REWARD_WIN  20.0f
+#define REWARD_LOSS -20.0f
 
 // Define Object Names
 #define WORLD_NAME "arm_world"
@@ -63,12 +63,15 @@
 #define COLLISION_FILTER "ground_plane::link::collision"
 #define COLLISION_ITEM   "tube::tube_link::tube_collision"
 #define COLLISION_POINT  "arm::gripperbase::gripper_link"
+#define COLLISION_MIDDLE  "arm::gripper_middle::middle_collision"
+#define COLLISION_RIGHT  "arm::gripper_right::right_gripper"
+#define COLLISION_LEFT  "arm::gripper_left::left_gripper"
 
 // Animation Steps
 #define ANIMATION_STEPS 1000
 
 // Set Debug Mode
-#define DEBUG true
+#define DEBUG false
 
 // Lock base rotation DOF (Add dof in header file if off)
 #define LOCKBASE true
@@ -271,19 +274,22 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 		/ TODO - Check if there is collision between the arm and object, then issue learning reward
 		/
 		*/
-		
-		if (strcmp(contacts->contact(i).collision2().c_str(), COLLISION_ITEM) == 0)
+
+		/*if ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 )
 		{
-			rewardHistory = REWARD_LOSS;
+			rewardHistory = REWARD_WIN;
 			newReward  = true;
 			endEpisode = true;
-			
-			if (strcmp(contacts->contact(i).collision1().c_str(), COLLISION_POINT) == 0)
-			{
-				rewardHistory = REWARD_WIN;
-			}
 			return;
 		}
+		else 
+		{*/
+          		//std::cout << contacts->contact(i).collision2().c_str() << std::endl;
+			rewardHistory = REWARD_WIN;
+			newReward  = true;
+			endEpisode = true;
+			return;
+		//}
 		
 		
 	}
@@ -333,8 +339,9 @@ bool ArmPlugin::updateAgent()
 	/ TODO - Increase or decrease the joint velocity based on whether the action is even or odd
 	/
 	*/
-	float velocity = (action/2!=0)?(-actionVelDelta):(actionVelDelta); // TODO - Set joint velocity based on whether action is even or odd.
 
+	float velocity = (action%2)?(vel[action/2]-actionVelDelta):(vel[action/2]+actionVelDelta); // TODO - Set joint velocity based on whether action is even or odd.
+	//printf("VELOCITY, %f \n",velocity);
 	if( velocity < VELOCITY_MIN )
 		velocity = VELOCITY_MIN;
 
@@ -364,8 +371,8 @@ bool ArmPlugin::updateAgent()
 	/ TODO - Increase or decrease the joint position based on whether the action is even or odd
 	/
 	*/
-	printf("%d",action);
-	float joint = (action/2)?(ref[action/2]-actionJointDelta):(ref[action/2]+actionJointDelta); // TODO - Set joint position based on whether action is even or odd.
+
+	float joint = (action%2)?(ref[action/2]-actionJointDelta):(ref[action/2]+actionJointDelta); // TODO - Set joint position based on whether action is even or odd.
 	joint=joint+ref[action/2];
 	// limit the joint to the specified range
 	if( joint < JOINT_MIN )
@@ -581,12 +588,14 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 
 		// get the bounding box for the gripper		
 		const math::Box& gripBBox = gripper->GetBoundingBox();
-		const float groundContact = 0.05f;
+		const float groundContact = 0.01f;
 		physics::LinkPtr link1  = model->GetLink("link1");
 		const math::Box& link1BBox = link1->GetBoundingBox();
 		physics::LinkPtr link2  = model->GetLink("link2");
 		const math::Box& link2BBox = link2->GetBoundingBox();
-		
+		physics::LinkPtr joint2  = model->GetLink("joint2");
+		const math::Box& joint2BBox = joint2->GetBoundingBox();
+
 		/*
 		/ TODO - set appropriate Reward for robot hitting the ground.
 		/
@@ -596,40 +605,47 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 		if(gripBBox.min.z<=groundContact)
 		{
 						
-			if(DEBUG){printf("GROUND CONTACT, EOE\n");}
+			if(DEBUG){printf("GROUND CONTACT gripper, EOE\n");}
 
 			rewardHistory = REWARD_LOSS;
 			newReward     = true;
 			endEpisode    = true;
 		}
-		
-		if(link1BBox.min.z<=groundContact)
+		else if (link1BBox.min.z<=groundContact)
 		{
 						
-			if(DEBUG){printf("GROUND CONTACT, EOE\n");}
+			if(DEBUG){printf("GROUND CONTACT link1, EOE\n");}
 
 			rewardHistory = REWARD_LOSS;
 			newReward     = true;
 			endEpisode    = true;
 		}
-		
-		if(link2BBox.min.z<=groundContact)
+		else if (link2BBox.min.z<=groundContact)
 		{
 						
-			if(DEBUG){printf("GROUND CONTACT, EOE\n");}
+			if(DEBUG){printf("GROUND CONTACT link2, EOE\n");}
 
 			rewardHistory = REWARD_LOSS;
 			newReward     = true;
 			endEpisode    = true;
 		}
-		
+		else if (joint2BBox.min.z<=groundContact)
+		{
+						
+			if(DEBUG){printf("GROUND CONTACT joint2, EOE\n");}
+
+			rewardHistory = REWARD_LOSS;
+			newReward     = true;
+			endEpisode    = true;
+		}
+
 		/*
 		/ TODO - Issue an interim reward based on the distance to the object
 		/
 		*/ 
 		
 		
-		if(gripBBox.min.z>groundContact)
+		else if (gripBBox.min.z>groundContact)
 		{
 			const float distGoal = BoxDistance(gripBBox,propBBox); // compute the reward from distance to the goal
 
