@@ -16,7 +16,7 @@
 #define JOINT_MAX	 2.0f
 
 // Turn on velocity based control
-#define VELOCITY_CONTROL false
+#define VELOCITY_CONTROL true
 #define VELOCITY_MIN -0.1f
 #define VELOCITY_MAX  0.1f
 
@@ -29,8 +29,8 @@
 #define DEBUG_DQN true
 #define GAMMA 0.9f
 #define EPS_START 0.9f
-#define EPS_END 0.01f
-#define EPS_DECAY 1000
+#define EPS_END 0.05f
+#define EPS_DECAY 300
 
 /*
 / TODO - Tune the following hyperparameters
@@ -40,9 +40,9 @@
 #define INPUT_WIDTH   128
 #define INPUT_HEIGHT  128
 #define OPTIMIZER "RMSprop"
-#define LEARNING_RATE 0.1f
+#define LEARNING_RATE 0.2f
 #define REPLAY_MEMORY 10000
-#define BATCH_SIZE 32
+#define BATCH_SIZE 16
 #define USE_LSTM true
 #define LSTM_SIZE 160
 
@@ -51,8 +51,8 @@
 /
 */
 
-#define REWARD_WIN  +1000.0f
-#define REWARD_LOSS -30.0f
+#define REWARD_WIN  20.0f
+#define REWARD_LOSS -20.0f
 
 // Define Object Names
 #define WORLD_NAME "arm_world"
@@ -275,7 +275,7 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 		/
 		*/
 
-		if ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 )
+		/*if ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 )
 		{
 			rewardHistory = REWARD_WIN;
 			newReward  = true;
@@ -283,13 +283,13 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 			return;
 		}
 		else 
-		{
+		{*/
           		//std::cout << contacts->contact(i).collision2().c_str() << std::endl;
-			rewardHistory = REWARD_LOSS;
+			rewardHistory = REWARD_WIN;
 			newReward  = true;
 			endEpisode = true;
 			return;
-		}
+		//}
 		
 		
 	}
@@ -373,7 +373,7 @@ bool ArmPlugin::updateAgent()
 	*/
 
 	float joint = (action%2)?(ref[action/2]-actionJointDelta):(ref[action/2]+actionJointDelta); // TODO - Set joint position based on whether action is even or odd.
-	//joint=joint+ref[action/2];
+	joint=joint+ref[action/2];
 	// limit the joint to the specified range
 	if( joint < JOINT_MIN )
 		joint = JOINT_MIN;
@@ -560,7 +560,7 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 	if( maxEpisodeLength > 0 && episodeFrames > maxEpisodeLength )
 	{
 		printf("ArmPlugin - triggering EOE, episode has exceeded %i frames\n", maxEpisodeLength);
-		rewardHistory = REWARD_LOSS*5;
+		rewardHistory = REWARD_LOSS;
 		newReward     = true;
 		endEpisode    = true;
 	}
@@ -657,11 +657,8 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 				const float distDelta  = lastGoalDistance - distGoal;
 
 				// compute the smoothed moving average of the delta of the distance to the goal
-				if(DEBUG){printf("distDelta %f\n",distDelta);}
-				avgGoalDelta  = (avgGoalDelta*0.001)+distDelta*(0.999);
+				avgGoalDelta  = (avgGoalDelta*0.3)+distDelta*(0.7);
 				rewardHistory = avgGoalDelta;
-				//if (std::abs(distDelta)<0.001)
-				//	rewardHistory-=1;
 				newReward     = true;	
 			}
 
