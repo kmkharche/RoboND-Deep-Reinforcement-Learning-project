@@ -70,7 +70,7 @@ set(generated_file_internal "/home/apeksha/RoboND/RoboND-DeepRL-Project/build/CM
 set(generated_cubin_file_internal "/home/apeksha/RoboND/RoboND-DeepRL-Project/build/CMakeFiles/jetson-reinforcement.dir/cuda/./jetson-reinforcement_generated_cudaPlanar.cu.o.cubin.txt") # path
 
 set(CUDA_NVCC_EXECUTABLE "/usr/local/cuda-8.0/bin/nvcc") # path
-set(CUDA_NVCC_FLAGS -O3;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_53,code=sm_53;-gencode;arch=compute_60,code=sm_60;-gencode;arch=compute_61,code=sm_61;-gencode;arch=compute_62,code=sm_62 ;; ) # list
+set(CUDA_NVCC_FLAGS -O3;-gencode;arch=compute_20,code=sm_20;-gencode;arch=compute_20,code=sm_21;-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_50,code=compute_50;-gencode;arch=compute_53,code=sm_53 ;; ) # list
 # Build specific configuration flags
 set(CUDA_NVCC_FLAGS_DEBUG  ; )
 set(CUDA_NVCC_FLAGS_MINSIZEREL  ; )
